@@ -201,6 +201,10 @@ func handleCmdED(ctx context.Context, msg *models.Message) {
 		return
 	}
 
+	if renderParams.HR.Enable {
+		renderParams.NumOutputs = 1
+	}
+
 	dlQueue.Add(renderParams, msg)
 }
 
