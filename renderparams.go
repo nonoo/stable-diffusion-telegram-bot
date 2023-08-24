@@ -111,7 +111,7 @@ func (r *RenderParams) Parse(ctx context.Context, s string) (firstCmdCharAt int,
 			}
 			r.NumOutputs = valInt
 			validAttr = true
-		case "scale", "c":
+		case "cfg", "c":
 			val, lexErr := lexer.Next()
 			if lexErr != nil {
 				return 0, fmt.Errorf(attr + " is missing value")
