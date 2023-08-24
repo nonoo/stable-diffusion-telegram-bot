@@ -82,7 +82,7 @@ a private chat.
 
 ### Setting render parameters
 
-You can use the following `-attr:val` assignments in the prompt:
+You can use the following `-attr val` assignments at the end of the prompt:
 
 - `seed/s` - set seed (hexadecimal)
 - `width/w` - set output image width
@@ -97,11 +97,16 @@ You can use the following `-attr:val` assignments in the prompt:
 - `hr-upscaler/hru` - set highres mode upscaler, get valid values with `/sdupscalers`
 - `hr-steps/hrt` - set the number of highres mode second pass steps
 
-Example prompt with attributes: `laughing santa with beer -s:1 -o:1`
-Enter negative prompts in the second line of your message (use Shift+Enter).
+Example prompt with attributes: `laughing santa with beer -s 1 -o 1`
 
-If you need to use spaces when entering samplers and upscalers, then use dots instead
-the spaces, the bot will replace them.
+Enter negative prompts in the second line of your message (use Shift+Enter). Example:
+```
+laughing santa with beer
+tree -s 1 -o 1
+```
+
+If you need to use spaces in sampler and upscaler names, then enclose them
+in double quotes.
 
 ## Donations
 

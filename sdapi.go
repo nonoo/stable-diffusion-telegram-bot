@@ -77,29 +77,6 @@ type RenderReq struct {
 	SendImages        bool                   `json:"send_images"`
 }
 
-type RenderParamsHR struct {
-	DenoisingStrength float32
-	Scale             float32
-	Upscaler          string
-	SecondPassSteps   int
-}
-
-type RenderParams struct {
-	Prompt         string
-	OrigPrompt     string
-	NegativePrompt string
-	Seed           uint32
-	Width          int
-	Height         int
-	Steps          int
-	NumOutputs     int
-	CFGScale       float32
-	SamplerName    string
-	ModelName      string
-
-	HR RenderParamsHR
-}
-
 func (a *sdAPIType) Render(ctx context.Context, params RenderParams) (imgs [][]byte, err error) {
 	postData, err := json.Marshal(RenderReq{
 		EnableHR:          params.HR.Scale > 0,

@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/go-telegram/bot v0.7.14
+	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/shirou/gopsutil v2.21.11+incompatible
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
 )
