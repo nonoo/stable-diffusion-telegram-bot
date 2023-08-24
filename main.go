@@ -39,7 +39,7 @@ func handleCmdED(ctx context.Context, msg *models.Message) {
 		Height:      512,
 		Steps:       20,
 		NumOutputs:  4,
-		CfgScale:    7,
+		CFGScale:    7,
 		SamplerName: params.DefaultSampler,
 		ModelName:   params.DefaultModel,
 		HR: RenderParamsHR{
@@ -119,11 +119,11 @@ func handleCmdED(ctx context.Context, msg *models.Message) {
 			case "scale", "c":
 				valFloat, err := strconv.ParseFloat(val, 32)
 				if err != nil {
-					fmt.Println("  invalid cfg scale")
-					sendReplyToMessage(ctx, msg, errorStr+": invalid cfg scale")
+					fmt.Println("  invalid CFG scale")
+					sendReplyToMessage(ctx, msg, errorStr+": invalid CFG scale")
 					return
 				}
-				renderParams.CfgScale = float32(valFloat)
+				renderParams.CFGScale = float32(valFloat)
 			case "sampler", "r":
 				val = strings.ReplaceAll(val, ".", " ")
 				samplers, err := sdAPI.GetSamplers(ctx)
@@ -244,8 +244,8 @@ func handleCmdEmbeddings(ctx context.Context, msg *models.Message) {
 	sendReplyToMessage(ctx, msg, "Available embeddings: "+strings.Join(embs, ", "))
 }
 
-func handleCmdLORAs(ctx context.Context, msg *models.Message) {
-	loras, err := sdAPI.GetLORAs(ctx)
+func handleCmdLoRAs(ctx context.Context, msg *models.Message) {
+	loras, err := sdAPI.GetLoRAs(ctx)
 	if err != nil {
 		fmt.Println("  error getting loras:", err)
 		sendReplyToMessage(ctx, msg, errorStr+": error getting loras: "+err.Error())
@@ -272,7 +272,7 @@ func handleCmdHelp(ctx context.Context, msg *models.Message) {
 		"!sdmodels - list available models\n"+
 		"!sdsamplers - list available samplers\n"+
 		"!sdembeddings - list available embeddings\n"+
-		"!sdloras - list available loras\n"+
+		"!sdloras - list available LoRAs\n"+
 		"!sdupscalers - list available upscalers\n"+
 		"!sdhelp - show this help\n\n"+
 		"For more information see https://github.com/nonoo/stable-diffusion-telegram-bot")
@@ -324,7 +324,7 @@ func telegramBotUpdateHandler(ctx context.Context, b *bot.Bot, update *models.Up
 			handleCmdEmbeddings(ctx, update.Message)
 			return
 		case "sdloras":
-			handleCmdLORAs(ctx, update.Message)
+			handleCmdLoRAs(ctx, update.Message)
 			return
 		case "sdupscalers":
 			handleCmdUpscalers(ctx, update.Message)

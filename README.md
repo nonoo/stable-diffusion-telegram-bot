@@ -71,7 +71,7 @@ variable. Available OS environment variables are:
 - `/sdmodels` - List available models
 - `/sdsamplers` - list available samplers
 - `/sdembeddings` - list available embeddings
-- `/sdloras` - list available loras
+- `/sdloras` - list available LoRAs
 - `/sdupscalers` - list available upscalers
 - `/sdhelp` - Cancel ongoing download
 
@@ -89,7 +89,7 @@ You can use the following `-attr:val` assignments in the prompt:
 - `height/h` - set output image height
 - `steps/t` - set the number of steps
 - `outcnt/o` - set count of output images
-- `scale/c` - set cfg scale
+- `scale/c` - set CFG scale
 - `sampler/r` - set sampler, get valid values with `/sdsamplers`
 - `model/m` - set model, get valid values with `/sdmodels`
 - `hr` - enable highres mode

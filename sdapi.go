@@ -69,7 +69,7 @@ type RenderReq struct {
 	BatchSize         int                    `json:"batch_size"`
 	NIter             int                    `json:"n_iter"`
 	Steps             int                    `json:"steps"`
-	CfgScale          float32                `json:"cfg_scale"`
+	CFGScale          float32                `json:"cfg_scale"`
 	Width             int                    `json:"width"`
 	Height            int                    `json:"height"`
 	NegativePrompt    string                 `json:"negative_prompt"`
@@ -93,7 +93,7 @@ type RenderParams struct {
 	Height         int
 	Steps          int
 	NumOutputs     int
-	CfgScale       float32
+	CFGScale       float32
 	SamplerName    string
 	ModelName      string
 
@@ -116,7 +116,7 @@ func (a *sdAPIType) Render(ctx context.Context, params RenderParams) (imgs [][]b
 		BatchSize:         params.NumOutputs,
 		NIter:             1,
 		Steps:             params.Steps,
-		CfgScale:          params.CfgScale,
+		CFGScale:          params.CFGScale,
 		Width:             params.Width,
 		Height:            params.Height,
 		NegativePrompt:    params.NegativePrompt,
@@ -247,7 +247,7 @@ func (a *sdAPIType) GetEmbeddings(ctx context.Context) (embs []string, err error
 	return
 }
 
-func (a *sdAPIType) GetLORAs(ctx context.Context) (loras []string, err error) {
+func (a *sdAPIType) GetLoRAs(ctx context.Context) (loras []string, err error) {
 	res, err := a.req(ctx, "/loras", "", nil)
 	if err != nil {
 		return nil, err

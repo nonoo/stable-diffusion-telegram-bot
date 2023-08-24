@@ -237,7 +237,7 @@ func (q *DownloadQueue) processQueueEntry(renderCtx context.Context, qEntry *Dow
 	}
 
 	qEntry.RenderParamsText = fmt.Sprintf("🌱%d 👟%d 🕹%.1f 🖼%dx%d%s 🔭%s 🧩%s", qEntry.Params.Seed, qEntry.Params.Steps,
-		qEntry.Params.CfgScale, qEntry.Params.Width, qEntry.Params.Height, numOutputs, qEntry.Params.SamplerName,
+		qEntry.Params.CFGScale, qEntry.Params.Width, qEntry.Params.Height, numOutputs, qEntry.Params.SamplerName,
 		qEntry.Params.ModelName)
 
 	if qEntry.Params.HR.Enable {
