@@ -101,7 +101,7 @@ func (p *paramsType) Init() error {
 		p.AllowedGroupIDs = append(p.AllowedGroupIDs, id)
 	}
 
-	s := os.Getenv("DELAYED_ED_START")
+	s := os.Getenv("DELAYED_SD_START")
 	if s != "" {
 		if s == "0" {
 			p.DelayedSDStart = false
