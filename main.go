@@ -37,15 +37,16 @@ func handleCmdED(ctx context.Context, msg *models.Message) {
 		Seed:        rand.Uint32(),
 		Width:       512,
 		Height:      512,
-		Steps:       20,
+		Steps:       35,
 		NumOutputs:  4,
 		CFGScale:    7,
 		SamplerName: params.DefaultSampler,
 		ModelName:   params.DefaultModel,
 		HR: RenderParamsHR{
-			DenoisingStrength: 0.7,
+			DenoisingStrength: 0.4,
 			Scale:             2,
 			Upscaler:          "R-ESRGAN 4x+",
+			SecondPassSteps:   15,
 		},
 	}
 

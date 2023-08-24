@@ -82,6 +82,7 @@ type RenderParamsHR struct {
 	DenoisingStrength float32
 	Scale             float32
 	Upscaler          string
+	SecondPassSteps   int
 }
 
 type RenderParams struct {
@@ -106,7 +107,7 @@ func (a *sdAPIType) Render(ctx context.Context, params RenderParams) (imgs [][]b
 		DenoisingStrength: params.HR.DenoisingStrength,
 		HRScale:           params.HR.Scale,
 		HRUpscaler:        params.HR.Upscaler,
-		HRSecondPassSteps: params.Steps,
+		HRSecondPassSteps: params.HR.SecondPassSteps,
 		HRSamplerName:     params.SamplerName,
 		HRPrompt:          params.Prompt,
 		HRNegativePrompt:  params.NegativePrompt,
