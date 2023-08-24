@@ -78,7 +78,6 @@ type RenderReq struct {
 }
 
 type RenderParamsHR struct {
-	Enable            bool
 	DenoisingStrength float32
 	Scale             float32
 	Upscaler          string
@@ -103,7 +102,7 @@ type RenderParams struct {
 
 func (a *sdAPIType) Render(ctx context.Context, params RenderParams) (imgs [][]byte, err error) {
 	postData, err := json.Marshal(RenderReq{
-		EnableHR:          params.HR.Enable,
+		EnableHR:          params.HR.Scale > 0,
 		DenoisingStrength: params.HR.DenoisingStrength,
 		HRScale:           params.HR.Scale,
 		HRUpscaler:        params.HR.Upscaler,

@@ -44,7 +44,6 @@ func handleCmdED(ctx context.Context, msg *models.Message) {
 		ModelName:   params.DefaultModel,
 		HR: RenderParamsHR{
 			DenoisingStrength: 0.4,
-			Scale:             2,
 			Upscaler:          "R-ESRGAN 4x+",
 			SecondPassSteps:   15,
 		},
@@ -153,9 +152,13 @@ func handleCmdED(ctx context.Context, msg *models.Message) {
 				}
 				renderParams.ModelName = val
 			case "hr":
-				if val != "0" {
-					renderParams.HR.Enable = true
+				valFloat, err := strconv.ParseFloat(val, 32)
+				if err != nil {
+					fmt.Println("  invalid hr scale")
+					sendReplyToMessage(ctx, msg, errorStr+": invalid hr scale")
+					return
 				}
+				renderParams.HR.Scale = float32(valFloat)
 			case "hr-denoisestrength", "hrd":
 				valFloat, err := strconv.ParseFloat(val, 32)
 				if err != nil {
@@ -164,14 +167,6 @@ func handleCmdED(ctx context.Context, msg *models.Message) {
 					return
 				}
 				renderParams.HR.DenoisingStrength = float32(valFloat)
-			case "hr-scale", "hrs":
-				valFloat, err := strconv.ParseFloat(val, 32)
-				if err != nil {
-					fmt.Println("  invalid hr scale")
-					sendReplyToMessage(ctx, msg, errorStr+": invalid hr scale")
-					return
-				}
-				renderParams.HR.Scale = float32(valFloat)
 			case "hr-upscaler", "hru":
 				val = strings.ReplaceAll(val, ".", " ")
 				upscalers, err := sdAPI.GetUpscalers(ctx)
@@ -186,6 +181,14 @@ func handleCmdED(ctx context.Context, msg *models.Message) {
 					return
 				}
 				renderParams.HR.Upscaler = val
+			case "hr-steps", "hrt":
+				valInt, err := strconv.Atoi(val)
+				if err != nil {
+					fmt.Println("  invalid hr second pass steps")
+					sendReplyToMessage(ctx, msg, errorStr+": invalid hr second pass steps")
+					return
+				}
+				renderParams.HR.SecondPassSteps = valInt
 			default:
 				fmt.Println("  invalid attribute", attr)
 				sendReplyToMessage(ctx, msg, errorStr+": invalid attribute "+attr)
@@ -202,7 +205,7 @@ func handleCmdED(ctx context.Context, msg *models.Message) {
 		return
 	}
 
-	if renderParams.HR.Enable {
+	if renderParams.HR.Scale > 0 {
 		renderParams.NumOutputs = 1
 	}
 

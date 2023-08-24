@@ -240,7 +240,7 @@ func (q *DownloadQueue) processQueueEntry(renderCtx context.Context, qEntry *Dow
 		qEntry.Params.CFGScale, qEntry.Params.Width, qEntry.Params.Height, numOutputs, qEntry.Params.SamplerName,
 		qEntry.Params.ModelName)
 
-	if qEntry.Params.HR.Enable {
+	if qEntry.Params.HR.Scale > 0 {
 		qEntry.RenderParamsText += " 🔎" + qEntry.Params.HR.Upscaler + "x" + fmt.Sprint(qEntry.Params.HR.Scale, "/", qEntry.Params.HR.DenoisingStrength)
 	}
 

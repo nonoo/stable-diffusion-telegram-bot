@@ -92,10 +92,10 @@ You can use the following `-attr:val` assignments in the prompt:
 - `scale/c` - set CFG scale
 - `sampler/r` - set sampler, get valid values with `/sdsamplers`
 - `model/m` - set model, get valid values with `/sdmodels`
-- `hr` - enable highres mode
+- `hr` - enable highres mode and set upscale ratio
 - `hr-denoisestrength/hrd` - set highres mode denoise strength
-- `hr-scale/hrs` - set highres mode upscale ratio
 - `hr-upscaler/hru` - set highres mode upscaler, get valid values with `/sdupscalers`
+- `hr-steps/hrt` - set the number of highres mode second pass steps
 
 Example prompt with attributes: `laughing santa with beer -s:1 -o:1`
 Enter negative prompts in the second line of your message (use Shift+Enter).
