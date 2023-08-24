@@ -84,7 +84,7 @@ a private chat.
 
 You can use the following `-attr val` assignments at the end of the prompt:
 
-- `seed/s` - set seed (hexadecimal)
+- `seed/s` - set seed
 - `width/w` - set output image width
 - `height/h` - set output image height
 - `steps/t` - set the number of steps
