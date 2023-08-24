@@ -58,41 +58,54 @@ func telegramBotUpdateHandler(ctx context.Context, b *bot.Bot, update *models.Up
 			cmd = strings.Split(cmd, "@")[0]
 		}
 		update.Message.Text = strings.TrimPrefix(update.Message.Text, cmd+" ")
+		cmdChar := string(cmd[0])
 		cmd = cmd[1:] // Cutting the command character.
 		switch cmd {
 		case "sd":
+			fmt.Println("  interpreting as cmd sd")
 			cmdHandler.ED(ctx, update.Message)
 			return
 		case "sdcancel":
+			fmt.Println("  interpreting as cmd sdcancel")
 			cmdHandler.EDCancel(ctx, update.Message)
 			return
 		case "sdmodels":
+			fmt.Println("  interpreting as cmd sdmodels")
 			cmdHandler.Models(ctx, update.Message)
 			return
 		case "sdsamplers":
+			fmt.Println("  interpreting as cmd sdsamplers")
 			cmdHandler.Samplers(ctx, update.Message)
 			return
 		case "sdembeddings":
+			fmt.Println("  interpreting as cmd sdembeddings")
 			cmdHandler.Embeddings(ctx, update.Message)
 			return
 		case "sdloras":
+			fmt.Println("  interpreting as cmd sdloras")
 			cmdHandler.LoRAs(ctx, update.Message)
 			return
 		case "sdupscalers":
+			fmt.Println("  interpreting as cmd sdupscalers")
 			cmdHandler.Upscalers(ctx, update.Message)
 			return
+		case "sdvaes":
+			fmt.Println("  interpreting as cmd sdvaes")
+			cmdHandler.VAEs(ctx, update.Message)
+			return
 		case "sdhelp":
-			cmdHandler.Help(ctx, update.Message)
+			fmt.Println("  interpreting as cmd sdhelp")
+			cmdHandler.Help(ctx, update.Message, cmdChar)
 			return
 		case "start":
-			fmt.Println("  (start cmd)")
+			fmt.Println("  interpreting as cmd start")
 			if update.Message.Chat.ID >= 0 { // From user?
 				sendReplyToMessage(ctx, update.Message, "🤖 Welcome! This is a Telegram Bot frontend "+
 					"for rendering images with Stable Diffusion.\n\nMore info: https://github.com/nonoo/stable-diffusion-telegram-bot")
 			}
 			return
 		default:
-			fmt.Println("  (invalid cmd)")
+			fmt.Println("  invalid cmd")
 			if update.Message.Chat.ID >= 0 {
 				sendReplyToMessage(ctx, update.Message, errorStr+": invalid command")
 			}

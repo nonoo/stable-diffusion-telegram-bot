@@ -263,3 +263,23 @@ func (a *sdAPIType) GetUpscalers(ctx context.Context) (upscalers []string, err e
 	}
 	return
 }
+
+func (a *sdAPIType) GetVAEs(ctx context.Context) (vaes []string, err error) {
+	res, err := a.req(ctx, "/sd-vae", "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var vaesRes []struct {
+		Name string `json:"model_name"`
+	}
+	err = json.Unmarshal([]byte(res), &vaesRes)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, u := range vaesRes {
+		vaes = append(vaes, u.Name)
+	}
+	return
+}

@@ -66,14 +66,15 @@ variable. Available OS environment variables are:
 
 ## Supported commands
 
-- `/sd` - Render images using supplied prompt
-- `/sdcancel` - Cancel ongoing download
-- `/sdmodels` - List available models
+- `/sd` - render images using supplied prompt
+- `/sdcancel` - cancel ongoing download
+- `/sdmodels` - list available models
 - `/sdsamplers` - list available samplers
 - `/sdembeddings` - list available embeddings
 - `/sdloras` - list available LoRAs
 - `/sdupscalers` - list available upscalers
-- `/sdhelp` - Cancel ongoing download
+- `/sdvaes` - list available VAEs
+- `/sdhelp` - print help
 
 You can also use the `!` command character instead of `/`.
 

@@ -77,7 +77,14 @@ func (c *cmdHandlerType) Models(ctx context.Context, msg *models.Message) {
 		sendReplyToMessage(ctx, msg, errorStr+": error getting models: "+err.Error())
 		return
 	}
-	sendReplyToMessage(ctx, msg, "🧩 Available models: "+strings.Join(models, ", ")+". Default: "+params.DefaultModel)
+	res := strings.Join(models, ", ")
+	var text string
+	if res != "" {
+		text = "🧩 Available models: " + res + ". Default: " + params.DefaultModel
+	} else {
+		text = "No available models."
+	}
+	sendReplyToMessage(ctx, msg, text)
 }
 
 func (c *cmdHandlerType) Samplers(ctx context.Context, msg *models.Message) {
@@ -87,7 +94,14 @@ func (c *cmdHandlerType) Samplers(ctx context.Context, msg *models.Message) {
 		sendReplyToMessage(ctx, msg, errorStr+": error getting samplers: "+err.Error())
 		return
 	}
-	sendReplyToMessage(ctx, msg, "🔭 Available samplers: "+strings.Join(samplers, ", ")+". Default: "+params.DefaultSampler)
+	res := strings.Join(samplers, ", ")
+	var text string
+	if res != "" {
+		text = "🔭 Available samplers: " + res + ". Default: " + params.DefaultSampler
+	} else {
+		text = "No available samplers."
+	}
+	sendReplyToMessage(ctx, msg, text)
 }
 
 func (c *cmdHandlerType) Embeddings(ctx context.Context, msg *models.Message) {
@@ -97,7 +111,14 @@ func (c *cmdHandlerType) Embeddings(ctx context.Context, msg *models.Message) {
 		sendReplyToMessage(ctx, msg, errorStr+": error getting embeddings: "+err.Error())
 		return
 	}
-	sendReplyToMessage(ctx, msg, "Available embeddings: "+strings.Join(embs, ", "))
+	res := strings.Join(embs, ", ")
+	var text string
+	if res != "" {
+		text = "Available embeddings: " + res
+	} else {
+		text = "No available embeddings."
+	}
+	sendReplyToMessage(ctx, msg, text)
 }
 
 func (c *cmdHandlerType) LoRAs(ctx context.Context, msg *models.Message) {
@@ -107,7 +128,14 @@ func (c *cmdHandlerType) LoRAs(ctx context.Context, msg *models.Message) {
 		sendReplyToMessage(ctx, msg, errorStr+": error getting loras: "+err.Error())
 		return
 	}
-	sendReplyToMessage(ctx, msg, "Available loras: "+strings.Join(loras, ", "))
+	res := strings.Join(loras, ", ")
+	var text string
+	if res != "" {
+		text = "Available LoRAs: " + res
+	} else {
+		text = "No available LoRAs."
+	}
+	sendReplyToMessage(ctx, msg, text)
 }
 
 func (c *cmdHandlerType) Upscalers(ctx context.Context, msg *models.Message) {
@@ -117,20 +145,45 @@ func (c *cmdHandlerType) Upscalers(ctx context.Context, msg *models.Message) {
 		sendReplyToMessage(ctx, msg, errorStr+": error getting upscalers: "+err.Error())
 		return
 	}
-	sendReplyToMessage(ctx, msg, "🔎 Available upscalers: "+strings.Join(ups, ", "))
+	res := strings.Join(ups, ", ")
+	var text string
+	if res != "" {
+		text = "🔎 Available upscalers: " + res
+	} else {
+		text = "🔎 No available upscalers."
+	}
+	sendReplyToMessage(ctx, msg, text)
 }
 
-func (c *cmdHandlerType) Help(ctx context.Context, msg *models.Message) {
+func (c *cmdHandlerType) VAEs(ctx context.Context, msg *models.Message) {
+	vaes, err := sdAPI.GetVAEs(ctx)
+	if err != nil {
+		fmt.Println("  error getting vaes:", err)
+		sendReplyToMessage(ctx, msg, errorStr+": error getting vaes: "+err.Error())
+		return
+	}
+	res := strings.Join(vaes, ", ")
+	var text string
+	if res != "" {
+		text = "Available VAEs: " + res
+	} else {
+		text = "No available VAEs."
+	}
+	sendReplyToMessage(ctx, msg, text)
+}
+
+func (c *cmdHandlerType) Help(ctx context.Context, msg *models.Message, cmdChar string) {
 	sendReplyToMessage(ctx, msg, "🤖 Stable Diffusion Telegram Bot\n\n"+
 		"Available commands:\n\n"+
-		"!sd [prompt] - render prompt\n"+
-		"!sdcancel - cancel current render\n"+
-		"!sdmodels - list available models\n"+
-		"!sdsamplers - list available samplers\n"+
-		"!sdembeddings - list available embeddings\n"+
-		"!sdloras - list available LoRAs\n"+
-		"!sdupscalers - list available upscalers\n"+
-		"!sdhelp - show this help\n\n"+
+		cmdChar+"sd [prompt] - render prompt\n"+
+		cmdChar+"sdcancel - cancel current render\n"+
+		cmdChar+"sdmodels - list available models\n"+
+		cmdChar+"sdsamplers - list available samplers\n"+
+		cmdChar+"sdembeddings - list available embeddings\n"+
+		cmdChar+"sdloras - list available LoRAs\n"+
+		cmdChar+"sdupscalers - list available upscalers\n"+
+		cmdChar+"sdvaes - list available VAEs\n"+
+		cmdChar+"sdhelp - show this help\n\n"+
 		"Available render parameters at the end of the prompt:\n\n"+
 		"-seed/s - set seed\n"+
 		"-width/w - set output image width\n"+
