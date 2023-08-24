@@ -84,18 +84,18 @@ a private chat.
 
 You can use the following `-attr val` assignments at the end of the prompt:
 
-- `seed/s` - set seed
-- `width/w` - set output image width
-- `height/h` - set output image height
-- `steps/t` - set the number of steps
-- `outcnt/o` - set count of output images
-- `cfg/c` - set CFG scale
-- `sampler/r` - set sampler, get valid values with `/sdsamplers`
-- `model/m` - set model, get valid values with `/sdmodels`
-- `hr` - enable highres mode and set upscale ratio
-- `hr-denoisestrength/hrd` - set highres mode denoise strength
-- `hr-upscaler/hru` - set highres mode upscaler, get valid values with `/sdupscalers`
-- `hr-steps/hrt` - set the number of highres mode second pass steps
+- `-seed/s` - set seed
+- `-width/w` - set output image width
+- `-height/h` - set output image height
+- `-steps/t` - set the number of steps
+- `-outcnt/o` - set count of output images
+- `-cfg/c` - set CFG scale
+- `-sampler/r` - set sampler, get valid values with `/sdsamplers`
+- `-model/m` - set model, get valid values with `/sdmodels`
+- `-hr` - enable highres mode and set upscale ratio
+- `-hr-denoisestrength/hrd` - set highres mode denoise strength
+- `-hr-upscaler/hru` - set highres mode upscaler, get valid values with `/sdupscalers`
+- `-hr-steps/hrt` - set the number of highres mode second pass steps
 
 Example prompt with attributes: `laughing santa with beer -s 1 -o 1`
 

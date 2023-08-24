@@ -131,5 +131,18 @@ func (c *cmdHandlerType) Help(ctx context.Context, msg *models.Message) {
 		"!sdloras - list available LoRAs\n"+
 		"!sdupscalers - list available upscalers\n"+
 		"!sdhelp - show this help\n\n"+
+		"Available render parameters at the end of the prompt:\n\n"+
+		"-seed/s - set seed\n"+
+		"-width/w - set output image width\n"+
+		"-height/h - set output image height\n"+
+		"-steps/t - set the number of steps\n"+
+		"-outcnt/o - set count of output images\n"+
+		"-cfg/c - set CFG scale\n"+
+		"-sampler/r - set sampler, get valid values with /sdsamplers\n"+
+		"-model/m - set model, get valid values with /sdmodels\n"+
+		"-hr - enable highres mode and set upscale ratio\n"+
+		"-hr-denoisestrength/hrd - set highres mode denoise strength\n"+
+		"-hr-upscaler/hru - set highres mode upscaler, get valid values with /sdupscalers\n"+
+		"-hr-steps/hrt - set the number of highres mode second pass steps\n\n"+
 		"For more information see https://github.com/nonoo/stable-diffusion-telegram-bot")
 }
