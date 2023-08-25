@@ -26,6 +26,7 @@ type RenderParams struct {
 	Height         int
 	Steps          int
 	NumOutputs     int
+	OutputPNG      bool
 	CFGScale       float32
 	SamplerName    string
 	ModelName      string
@@ -111,6 +112,8 @@ func (r *RenderParams) Parse(ctx context.Context, s string) (firstCmdCharAt int,
 			}
 			r.NumOutputs = valInt
 			validAttr = true
+		case "png", "p":
+			r.OutputPNG = true
 		case "cfg", "c":
 			val, lexErr := lexer.Next()
 			if lexErr != nil {

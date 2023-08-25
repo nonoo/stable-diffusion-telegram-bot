@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"image/jpeg"
+	"image/png"
 	"math/rand"
 	"regexp"
 	"strconv"
@@ -73,9 +75,28 @@ func (e *DownloadQueueEntry) sendReply(ctx context.Context, s string) {
 	}
 }
 
-func (e *DownloadQueueEntry) sendImages(ctx context.Context, imgs [][]byte, retryAllowed bool) {
+func (e *DownloadQueueEntry) convertImagesFromPNGToJPG(ctx context.Context, imgs [][]byte) error {
+	for i := range imgs {
+		p, err := png.Decode(bytes.NewReader(imgs[i]))
+		if err != nil {
+			fmt.Println("  png decode error:", err)
+			return fmt.Errorf("png decode error: %w", err)
+		}
+		buf := new(bytes.Buffer)
+		err = jpeg.Encode(buf, p, &jpeg.Options{Quality: 80})
+		if err != nil {
+			fmt.Println("  jpg decode error:", err)
+			return fmt.Errorf("jpg decode error: %w", err)
+		}
+		imgs[i] = buf.Bytes()
+	}
+	return nil
+}
+
+func (e *DownloadQueueEntry) sendImages(ctx context.Context, imgs [][]byte, retryAllowed bool) error {
 	if len(imgs) == 0 {
-		return
+		fmt.Println("  error: nothing to upload")
+		return fmt.Errorf("nothing to upload")
 	}
 
 	var media []models.InputMedia
@@ -103,17 +124,17 @@ func (e *DownloadQueueEntry) sendImages(ctx context.Context, imgs [][]byte, retr
 		fmt.Println("  send images error:", err)
 
 		if !retryAllowed {
-			return
+			return fmt.Errorf("send images error: %w", err)
 		}
 
 		retryAfter := e.checkWaitError(err)
 		if retryAfter > 0 {
 			fmt.Println("  retrying after", retryAfter, "...")
 			time.Sleep(retryAfter)
-			e.sendImages(ctx, imgs, false)
-			return
+			return e.sendImages(ctx, imgs, false)
 		}
 	}
+	return nil
 }
 
 func (e *DownloadQueueEntry) deleteReply(ctx context.Context) {
@@ -236,8 +257,13 @@ func (q *DownloadQueue) processQueueEntry(renderCtx context.Context, qEntry *Dow
 		numOutputs = fmt.Sprintf("x%d", qEntry.Params.NumOutputs)
 	}
 
-	qEntry.RenderParamsText = fmt.Sprintf("🌱%d 👟%d 🕹%.1f 🖼%dx%d%s 🔭%s 🧩%s", qEntry.Params.Seed, qEntry.Params.Steps,
-		qEntry.Params.CFGScale, qEntry.Params.Width, qEntry.Params.Height, numOutputs, qEntry.Params.SamplerName,
+	var outFormatText string
+	if qEntry.Params.OutputPNG {
+		outFormatText = "/PNG"
+	}
+
+	qEntry.RenderParamsText = fmt.Sprintf("🌱%d 👟%d 🕹%.1f 🖼%dx%d%s%s 🔭%s 🧩%s", qEntry.Params.Seed, qEntry.Params.Steps,
+		qEntry.Params.CFGScale, qEntry.Params.Width, qEntry.Params.Height, numOutputs, outFormatText, qEntry.Params.SamplerName,
 		qEntry.Params.ModelName)
 
 	if qEntry.Params.HR.Scale > 0 {
@@ -301,12 +327,21 @@ checkLoop:
 		}
 	}
 
+	if !qEntry.Params.OutputPNG {
+		err = qEntry.convertImagesFromPNGToJPG(q.ctx, imgs)
+		if err != nil {
+			return err
+		}
+	}
+
 	fmt.Println("  uploading...")
 	qEntry.sendReply(q.ctx, uploadingStr+"\n"+qEntry.RenderParamsText)
-	qEntry.sendImages(q.ctx, imgs, true)
-	qEntry.deleteReply(q.ctx)
 
-	return nil
+	err = qEntry.sendImages(q.ctx, imgs, true)
+	if err == nil {
+		qEntry.deleteReply(q.ctx)
+	}
+	return err
 }
 
 func (q *DownloadQueue) processor() {

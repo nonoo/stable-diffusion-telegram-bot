@@ -190,6 +190,7 @@ func (c *cmdHandlerType) Help(ctx context.Context, msg *models.Message, cmdChar 
 		"-height/h - set output image height\n"+
 		"-steps/t - set the number of steps\n"+
 		"-outcnt/o - set count of output images\n"+
+		"-png - upload PNGs instead of JPEGs\n"+
 		"-cfg/c - set CFG scale\n"+
 		"-sampler/r - set sampler, get valid values with /sdsamplers\n"+
 		"-model/m - set model, get valid values with /sdmodels\n"+
