@@ -103,7 +103,7 @@ func (e *DownloadQueueEntry) sendImages(ctx context.Context, imgs [][]byte, retr
 	for i := range imgs {
 		var c string
 		if i == 0 {
-			c = e.RenderParamsText
+			c = e.Params.OrigPrompt + "\n" + e.RenderParamsText
 			if len(c) > 1024 {
 				c = c[:1021] + "..."
 			}
