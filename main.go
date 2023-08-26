@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"time"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -28,6 +29,15 @@ func sendReplyToMessage(ctx context.Context, replyToMsg *models.Message, s strin
 		fmt.Println("  reply send error:", err)
 	}
 	return
+}
+
+func sendTextToAdmins(ctx context.Context, s string) {
+	for _, chatID := range params.AdminUserIDs {
+		_, _ = telegramBot.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: chatID,
+			Text:   s,
+		})
+	}
 }
 
 func telegramBotUpdateHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -148,12 +158,17 @@ func main() {
 		panic(fmt.Sprint("can't init telegram bot: ", err))
 	}
 
-	for _, chatID := range params.AdminUserIDs {
-		_, _ = telegramBot.SendMessage(ctx, &bot.SendMessageParams{
-			ChatID: chatID,
-			Text:   "🤖 Bot started",
-		})
-	}
+	verStr, _ := versionCheckGetStr(ctx)
+	sendTextToAdmins(ctx, "🤖 Bot started, "+verStr)
+
+	go func() {
+		for {
+			time.Sleep(24 * time.Hour)
+			if s, updateNeededOrError := versionCheckGetStr(ctx); updateNeededOrError {
+				sendTextToAdmins(ctx, s)
+			}
+		}
+	}()
 
 	telegramBot.Start(ctx)
 }
