@@ -1,4 +1,4 @@
-# stable-diffusion-telegram-bot
+# Stable Diffusion Telegram Bot
 
 This is a Telegram Bot frontend for rendering images with
 [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui/).
