@@ -218,7 +218,7 @@ func (q *DownloadQueue) queryProgress(ctx context.Context, prevProgressPercent i
 		} else if progressPercent < 0 {
 			progressPercent = 0
 		}
-		fmt.Print("    progress: ", progressPercent, "% eta:", eta.Round(time.Second), "\n")
+		fmt.Print("    progress: ", progressPercent, "% eta: ", eta.Round(time.Second), "\n")
 	}
 	return
 }
