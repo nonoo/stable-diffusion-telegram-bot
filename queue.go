@@ -316,10 +316,7 @@ checkLoop:
 		case <-progressPercentUpdateTicker.C:
 			qEntry.sendReply(q.ctx, processStr+" "+getProgressbar(progressPercent, progressBarLength)+" ETA: "+fmt.Sprint(eta.Round(time.Second))+"\n"+qEntry.RenderParamsText)
 		case <-progressCheckTicker.C:
-			progressPercent, eta, err = q.queryProgress(renderCtx, progressPercent)
-			if err != nil {
-				return err
-			}
+			progressPercent, eta, _ = q.queryProgress(renderCtx, progressPercent)
 		case err = <-q.currentEntry.errChan:
 			return err
 		case imgs = <-q.currentEntry.imgsChan:
