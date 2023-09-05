@@ -232,16 +232,21 @@ func (q *DownloadQueue) render(renderCtx context.Context, qEntry *DownloadQueueE
 	}
 
 	if errors.Is(err, syscall.ECONNREFUSED) { // Can't connect to Stable Diffusion?
-		qEntry.sendReply(renderCtx, restartStr)
-		err := startStableDiffusionIfNeeded(renderCtx)
-		if err != nil {
+		if params.SDStart {
+			qEntry.sendReply(renderCtx, restartStr)
+			err = startStableDiffusionIfNeeded(renderCtx)
+			if err != nil {
+				fmt.Println("  error:", err)
+				qEntry.sendReply(renderCtx, restartFailedStr+": "+err.Error())
+				panic(err.Error())
+			}
+			if retryAllowed {
+				q.render(renderCtx, qEntry, false, imgsChan, errChan, stoppedChan)
+				return
+			}
+		} else {
+			err = fmt.Errorf("Stable Diffusion is not running and start is disabled.")
 			fmt.Println("  error:", err)
-			qEntry.sendReply(renderCtx, restartFailedStr+": "+err.Error())
-			panic(err.Error())
-		}
-		if retryAllowed {
-			q.render(renderCtx, qEntry, false, imgsChan, errChan, stoppedChan)
-			return
 		}
 	}
 

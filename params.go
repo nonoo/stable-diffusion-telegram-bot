@@ -18,6 +18,7 @@ type paramsType struct {
 	AdminUserIDs    []int64
 	AllowedGroupIDs []int64
 
+	SDStart        bool
 	DelayedSDStart bool
 	DefaultModel   string
 	DefaultSampler string
@@ -34,6 +35,7 @@ func (p *paramsType) Init() error {
 	flag.StringVar(&adminUserIDs, "admin-user-ids", "", "admin telegram user ids")
 	var allowedGroupIDs string
 	flag.StringVar(&allowedGroupIDs, "allowed-group-ids", "", "allowed telegram group ids")
+	flag.BoolVar(&p.SDStart, "sd-start", true, "start stable diffusion if needed")
 	flag.BoolVar(&p.DelayedSDStart, "delayed-sd-start", false, "start stable diffusion only when the first prompt arrives")
 	flag.StringVar(&p.DefaultModel, "default-model", "", "default model name")
 	flag.StringVar(&p.DefaultSampler, "default-sampler", "", "default sampler name")
@@ -101,7 +103,16 @@ func (p *paramsType) Init() error {
 		p.AllowedGroupIDs = append(p.AllowedGroupIDs, id)
 	}
 
-	s := os.Getenv("DELAYED_SD_START")
+	s := os.Getenv("SD_START")
+	if s != "" {
+		if s == "0" {
+			p.SDStart = false
+		} else {
+			p.SDStart = true
+		}
+	}
+
+	s = os.Getenv("DELAYED_SD_START")
 	if s != "" {
 		if s == "0" {
 			p.DelayedSDStart = false

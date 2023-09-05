@@ -140,7 +140,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	if !params.DelayedSDStart {
+	if params.SDStart && !params.DelayedSDStart {
 		if err := startStableDiffusionIfNeeded(ctx); err != nil {
 			panic(err.Error())
 		}
