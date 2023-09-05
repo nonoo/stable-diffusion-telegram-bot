@@ -12,6 +12,7 @@ import (
 
 type paramsType struct {
 	BotToken                 string
+	StableDiffusionPath      string
 	StableDiffusionWebUIPath string
 
 	AllowedUserIDs  []int64
@@ -28,6 +29,7 @@ var params paramsType
 
 func (p *paramsType) Init() error {
 	flag.StringVar(&p.BotToken, "bot-token", "", "telegram bot token")
+	flag.StringVar(&p.StableDiffusionPath, "sd-path", "", "path of the stable diffusion directory")
 	flag.StringVar(&p.StableDiffusionWebUIPath, "sd-webui-path", "", "path of the stable diffusion webui start script")
 	var allowedUserIDs string
 	flag.StringVar(&allowedUserIDs, "allowed-user-ids", "", "allowed telegram user ids")
@@ -48,11 +50,17 @@ func (p *paramsType) Init() error {
 		return fmt.Errorf("bot token not set")
 	}
 
+	if p.StableDiffusionPath == "" {
+		p.StableDiffusionPath = os.Getenv("STABLE_DIFFUSION_PATH")
+	}
+	if p.StableDiffusionPath == "" {
+		return fmt.Errorf("stable diffusion path not set")
+	}
 	if p.StableDiffusionWebUIPath == "" {
 		p.StableDiffusionWebUIPath = os.Getenv("STABLE_DIFFUSION_WEBUI_PATH")
 	}
 	if p.StableDiffusionWebUIPath == "" {
-		return fmt.Errorf("stable diffusion path not set")
+		return fmt.Errorf("stable diffusion webui path not set")
 	}
 
 	if allowedUserIDs == "" {

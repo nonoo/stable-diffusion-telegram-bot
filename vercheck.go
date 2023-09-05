@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/go-git/go-git/v5"
@@ -62,7 +61,7 @@ func versionCheck(ctx context.Context) (latestVersion, currentVersion string, er
 	}
 	latestVersion = release.GetTagName()
 
-	repo, err := git.PlainOpen(filepath.Dir(params.StableDiffusionWebUIPath))
+	repo, err := git.PlainOpen(params.StableDiffusionPath)
 	if err != nil {
 		return "", "", fmt.Errorf("getting current stable diffusion version: %w", err)
 	}
