@@ -109,7 +109,7 @@ func (e *DownloadQueueEntry) sendImages(ctx context.Context, imgs [][]byte, retr
 			}
 		}
 		media = append(media, &models.InputMediaPhoto{
-			Media:           fmt.Sprintf("attach://ed-image-%x-%d-%d.jpg", e.Params.Seed, e.TaskID, i),
+			Media:           fmt.Sprintf("attach://sd-image-%x-%d-%d.jpg", e.Params.Seed, e.TaskID, i),
 			MediaAttachment: bytes.NewReader(imgs[i]),
 			Caption:         c,
 		})
