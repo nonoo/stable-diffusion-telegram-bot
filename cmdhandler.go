@@ -61,6 +61,15 @@ func (c *cmdHandlerType) ED(ctx context.Context, msg *models.Message) {
 		renderParams.NumOutputs = 1
 	}
 
+	if strings.HasSuffix(strings.ToLower(renderParams.ModelName), "sdxl") {
+		if renderParams.Width < 1024 {
+			renderParams.Width = 1024
+		}
+		if renderParams.Height < 1024 {
+			renderParams.Height = 1024
+		}
+	}
+
 	dlQueue.Add(renderParams, msg)
 }
 

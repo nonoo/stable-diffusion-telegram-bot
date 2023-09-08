@@ -110,6 +110,9 @@ tree -s 1 -o 1
 If you need to use spaces in sampler and upscaler names, then enclose them
 in double quotes.
 
+The default resolution is 512x512. If the currently used model's name ends with "sdxl"
+then the bot increases the resolution to 1024.
+
 ## Donations
 
 If you find this bot useful then [buy me a beer](https://paypal.me/ha2non). :)
