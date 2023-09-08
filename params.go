@@ -19,10 +19,14 @@ type paramsType struct {
 	AdminUserIDs    []int64
 	AllowedGroupIDs []int64
 
-	SDStart        bool
-	DelayedSDStart bool
-	DefaultModel   string
-	DefaultSampler string
+	SDStart           bool
+	DelayedSDStart    bool
+	DefaultModel      string
+	DefaultSampler    string
+	DefaultWidth      int
+	DefaultHeight     int
+	DefaultWidthSDXL  int
+	DefaultHeightSDXL int
 }
 
 var params paramsType
@@ -41,6 +45,10 @@ func (p *paramsType) Init() error {
 	flag.BoolVar(&p.DelayedSDStart, "delayed-sd-start", false, "start stable diffusion only when the first prompt arrives")
 	flag.StringVar(&p.DefaultModel, "default-model", "", "default model name")
 	flag.StringVar(&p.DefaultSampler, "default-sampler", "", "default sampler name")
+	flag.IntVar(&p.DefaultWidth, "default-width", 512, "default image width")
+	flag.IntVar(&p.DefaultHeight, "default-height", 512, "default image height")
+	flag.IntVar(&p.DefaultWidthSDXL, "default-width-sdxl", 1024, "default image width for SDXL models")
+	flag.IntVar(&p.DefaultHeightSDXL, "default-height-sdxl", 1024, "default image height for SDXL models")
 	flag.Parse()
 
 	if p.BotToken == "" {
@@ -135,6 +143,39 @@ func (p *paramsType) Init() error {
 
 	if p.DefaultSampler == "" {
 		p.DefaultSampler = os.Getenv("DEFAULT_SAMPLER")
+	}
+
+	s = os.Getenv("DEFAULT_WIDTH")
+	if s != "" {
+		val, err := strconv.Atoi(s)
+		if err != nil {
+			return fmt.Errorf("invalid default width")
+		}
+		p.DefaultWidth = val
+	}
+	s = os.Getenv("DEFAULT_HEIGHT")
+	if s != "" {
+		val, err := strconv.Atoi(s)
+		if err != nil {
+			return fmt.Errorf("invalid default height")
+		}
+		p.DefaultHeight = val
+	}
+	s = os.Getenv("DEFAULT_WIDTH_SDXL")
+	if s != "" {
+		val, err := strconv.Atoi(s)
+		if err != nil {
+			return fmt.Errorf("invalid default width for SDXL")
+		}
+		p.DefaultWidthSDXL = val
+	}
+	s = os.Getenv("DEFAULT_HEIGHT_SDXL")
+	if s != "" {
+		val, err := strconv.Atoi(s)
+		if err != nil {
+			return fmt.Errorf("invalid default height for SDXL")
+		}
+		p.DefaultHeightSDXL = val
 	}
 
 	return nil

@@ -63,6 +63,10 @@ variable. Available OS environment variables are:
 - `DELAYED_SD_START`
 - `DEFAULT_MODEL`
 - `DEFAULT_SAMPLER`
+- `DEFAULT_WIDTH`
+- `DEFAULT_HEIGHT`
+- `DEFAULT_WIDTH_SDXL`
+- `DEFAULT_HEIGHT_SDXL`
 
 ## Supported commands
 

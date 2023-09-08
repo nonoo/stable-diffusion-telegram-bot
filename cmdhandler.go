@@ -15,8 +15,8 @@ func (c *cmdHandlerType) ED(ctx context.Context, msg *models.Message) {
 	renderParams := RenderParams{
 		OrigPrompt:  msg.Text,
 		Seed:        rand.Uint32(),
-		Width:       512,
-		Height:      512,
+		Width:       params.DefaultWidth,
+		Height:      params.DefaultHeight,
 		Steps:       35,
 		NumOutputs:  4,
 		CFGScale:    7,
@@ -59,15 +59,6 @@ func (c *cmdHandlerType) ED(ctx context.Context, msg *models.Message) {
 
 	if renderParams.HR.Scale > 0 {
 		renderParams.NumOutputs = 1
-	}
-
-	if strings.HasSuffix(strings.ToLower(renderParams.ModelName), "sdxl") {
-		if renderParams.Width < 1024 {
-			renderParams.Width = 1024
-		}
-		if renderParams.Height < 1024 {
-			renderParams.Height = 1024
-		}
 	}
 
 	dlQueue.Add(renderParams, msg)

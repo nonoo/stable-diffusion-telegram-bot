@@ -38,6 +38,9 @@ type RenderParams struct {
 func (r *RenderParams) Parse(ctx context.Context, s string) (firstCmdCharAt int, err error) {
 	lexer := shlex.NewLexer(strings.NewReader(s))
 
+	gotWidth := false
+	gotHeight := false
+
 	firstCmdCharAt = -1
 	for {
 		token, lexErr := lexer.Next()
@@ -79,6 +82,7 @@ func (r *RenderParams) Parse(ctx context.Context, s string) (firstCmdCharAt int,
 			}
 			r.Width = valInt
 			validAttr = true
+			gotWidth = true
 		case "height", "h":
 			val, lexErr := lexer.Next()
 			if lexErr != nil {
@@ -90,6 +94,7 @@ func (r *RenderParams) Parse(ctx context.Context, s string) (firstCmdCharAt int,
 			}
 			r.Height = valInt
 			validAttr = true
+			gotHeight = true
 		case "steps", "t":
 			val, lexErr := lexer.Next()
 			if lexErr != nil {
@@ -206,5 +211,22 @@ func (r *RenderParams) Parse(ctx context.Context, s string) (firstCmdCharAt int,
 			firstCmdCharAt = strings.Index(s, token)
 		}
 	}
+
+	if strings.HasSuffix(strings.ToLower(r.ModelName), "sdxl") {
+		if !gotWidth {
+			r.Width = params.DefaultWidthSDXL
+		}
+		if !gotHeight {
+			r.Height = params.DefaultHeightSDXL
+		}
+	} else {
+		if !gotWidth {
+			r.Width = params.DefaultWidth
+		}
+		if !gotHeight {
+			r.Height = params.DefaultHeight
+		}
+	}
+
 	return
 }
