@@ -31,7 +31,7 @@ const processTimeout = 3 * time.Minute
 const groupChatProgressUpdateInterval = 3 * time.Second
 const privateChatProgressUpdateInterval = 500 * time.Millisecond
 
-type DownloadQueueEntry struct {
+type ReqQueueEntry struct {
 	Params RenderParams
 
 	TaskID           uint64
@@ -41,7 +41,7 @@ type DownloadQueueEntry struct {
 	Message      *models.Message
 }
 
-func (e *DownloadQueueEntry) checkWaitError(err error) time.Duration {
+func (e *ReqQueueEntry) checkWaitError(err error) time.Duration {
 	var retryRegex = regexp.MustCompile(`{"retry_after":([0-9]+)}`)
 	match := retryRegex.FindStringSubmatch(err.Error())
 	if len(match) < 2 {
@@ -55,7 +55,7 @@ func (e *DownloadQueueEntry) checkWaitError(err error) time.Duration {
 	return time.Duration(retryAfter) * time.Second
 }
 
-func (e *DownloadQueueEntry) sendReply(ctx context.Context, s string) {
+func (e *ReqQueueEntry) sendReply(ctx context.Context, s string) {
 	if e.ReplyMessage == nil {
 		e.ReplyMessage = sendReplyToMessage(ctx, e.Message, s)
 	} else if e.ReplyMessage.Text != s {
@@ -75,7 +75,7 @@ func (e *DownloadQueueEntry) sendReply(ctx context.Context, s string) {
 	}
 }
 
-func (e *DownloadQueueEntry) convertImagesFromPNGToJPG(ctx context.Context, imgs [][]byte) error {
+func (e *ReqQueueEntry) convertImagesFromPNGToJPG(ctx context.Context, imgs [][]byte) error {
 	for i := range imgs {
 		p, err := png.Decode(bytes.NewReader(imgs[i]))
 		if err != nil {
@@ -93,7 +93,7 @@ func (e *DownloadQueueEntry) convertImagesFromPNGToJPG(ctx context.Context, imgs
 	return nil
 }
 
-func (e *DownloadQueueEntry) sendImages(ctx context.Context, imgs [][]byte, retryAllowed bool) error {
+func (e *ReqQueueEntry) sendImages(ctx context.Context, imgs [][]byte, retryAllowed bool) error {
 	if len(imgs) == 0 {
 		fmt.Println("  error: nothing to upload")
 		return fmt.Errorf("nothing to upload")
@@ -137,7 +137,7 @@ func (e *DownloadQueueEntry) sendImages(ctx context.Context, imgs [][]byte, retr
 	return nil
 }
 
-func (e *DownloadQueueEntry) deleteReply(ctx context.Context) {
+func (e *ReqQueueEntry) deleteReply(ctx context.Context) {
 	if e.ReplyMessage == nil {
 		return
 	}
@@ -148,7 +148,7 @@ func (e *DownloadQueueEntry) deleteReply(ctx context.Context) {
 	})
 }
 
-type DownloadQueueCurrentEntry struct {
+type ReqQueueCurrentEntry struct {
 	canceled  bool
 	ctxCancel context.CancelFunc
 
@@ -157,19 +157,19 @@ type DownloadQueueCurrentEntry struct {
 	stoppedChan chan bool
 }
 
-type DownloadQueue struct {
+type ReqQueue struct {
 	mutex          sync.Mutex
 	ctx            context.Context
-	entries        []DownloadQueueEntry
+	entries        []ReqQueueEntry
 	processReqChan chan bool
 
-	currentEntry DownloadQueueCurrentEntry
+	currentEntry ReqQueueCurrentEntry
 }
 
-func (q *DownloadQueue) Add(params RenderParams, message *models.Message) {
+func (q *ReqQueue) Add(params RenderParams, message *models.Message) {
 	q.mutex.Lock()
 
-	newEntry := DownloadQueueEntry{
+	newEntry := ReqQueueEntry{
 		Params:  params,
 		TaskID:  rand.Uint64(),
 		Message: message,
@@ -189,7 +189,7 @@ func (q *DownloadQueue) Add(params RenderParams, message *models.Message) {
 	}
 }
 
-func (q *DownloadQueue) CancelCurrentEntry(ctx context.Context) (err error) {
+func (q *ReqQueue) CancelCurrentEntry(ctx context.Context) (err error) {
 	q.mutex.Lock()
 	if len(q.entries) > 0 {
 		q.currentEntry.canceled = true
@@ -202,11 +202,11 @@ func (q *DownloadQueue) CancelCurrentEntry(ctx context.Context) (err error) {
 	return
 }
 
-func (q *DownloadQueue) getQueuePositionString(pos int) string {
+func (q *ReqQueue) getQueuePositionString(pos int) string {
 	return "👨‍👦‍👦 Request queued at position #" + fmt.Sprint(pos)
 }
 
-func (q *DownloadQueue) queryProgress(ctx context.Context, prevProgressPercent int) (progressPercent int, eta time.Duration, err error) {
+func (q *ReqQueue) queryProgress(ctx context.Context, prevProgressPercent int) (progressPercent int, eta time.Duration, err error) {
 	progressPercent = prevProgressPercent
 
 	var newProgressPercent int
@@ -223,7 +223,7 @@ func (q *DownloadQueue) queryProgress(ctx context.Context, prevProgressPercent i
 	return
 }
 
-func (q *DownloadQueue) render(renderCtx context.Context, qEntry *DownloadQueueEntry, retryAllowed bool, imgsChan chan [][]byte, errChan chan error, stoppedChan chan bool) {
+func (q *ReqQueue) render(renderCtx context.Context, qEntry *ReqQueueEntry, retryAllowed bool, imgsChan chan [][]byte, errChan chan error, stoppedChan chan bool) {
 	imgs, err := sdAPI.Render(renderCtx, qEntry.Params)
 	if err == nil {
 		imgsChan <- imgs
@@ -254,7 +254,7 @@ func (q *DownloadQueue) render(renderCtx context.Context, qEntry *DownloadQueueE
 	stoppedChan <- true
 }
 
-func (q *DownloadQueue) processQueueEntry(renderCtx context.Context, qEntry *DownloadQueueEntry) error {
+func (q *ReqQueue) processQueueEntry(renderCtx context.Context, qEntry *ReqQueueEntry) error {
 	fmt.Print("processing request from ", qEntry.Message.From.Username, "#", qEntry.Message.From.ID, ": ", qEntry.Params.Prompt, "\n")
 
 	var numOutputs string
@@ -346,7 +346,7 @@ checkLoop:
 	return err
 }
 
-func (q *DownloadQueue) processor() {
+func (q *ReqQueue) processor() {
 	for {
 		q.mutex.Lock()
 		if (len(q.entries)) == 0 {
@@ -362,7 +362,7 @@ func (q *DownloadQueue) processor() {
 
 		qEntry := &q.entries[0]
 
-		q.currentEntry = DownloadQueueCurrentEntry{}
+		q.currentEntry = ReqQueueCurrentEntry{}
 		var renderCtx context.Context
 		renderCtx, q.currentEntry.ctxCancel = context.WithTimeout(q.ctx, processTimeout)
 		q.currentEntry.imgsChan = make(chan [][]byte)
@@ -400,7 +400,7 @@ func (q *DownloadQueue) processor() {
 	}
 }
 
-func (q *DownloadQueue) Init(ctx context.Context) {
+func (q *ReqQueue) Init(ctx context.Context) {
 	q.ctx = ctx
 	q.processReqChan = make(chan bool)
 	go q.processor()

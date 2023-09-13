@@ -16,7 +16,7 @@ import (
 var telegramBot *bot.Bot
 var cmdHandler cmdHandlerType
 var sdAPI sdAPIType
-var dlQueue DownloadQueue
+var reqQueue ReqQueue
 
 func sendReplyToMessage(ctx context.Context, replyToMsg *models.Message, s string) (msg *models.Message) {
 	var err error
@@ -146,7 +146,7 @@ func main() {
 		}
 	}
 
-	dlQueue.Init(ctx)
+	reqQueue.Init(ctx)
 
 	opts := []bot.Option{
 		bot.WithDefaultHandler(telegramBotUpdateHandler),

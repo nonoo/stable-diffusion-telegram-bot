@@ -61,11 +61,11 @@ func (c *cmdHandlerType) SD(ctx context.Context, msg *models.Message) {
 		renderParams.NumOutputs = 1
 	}
 
-	dlQueue.Add(renderParams, msg)
+	reqQueue.Add(renderParams, msg)
 }
 
 func (c *cmdHandlerType) SDCancel(ctx context.Context, msg *models.Message) {
-	if err := dlQueue.CancelCurrentEntry(ctx); err != nil {
+	if err := reqQueue.CancelCurrentEntry(ctx); err != nil {
 		sendReplyToMessage(ctx, msg, errorStr+": "+err.Error())
 	}
 }
