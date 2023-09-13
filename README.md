@@ -98,6 +98,8 @@ You can use the following `-attr val` assignments at the end of the prompt:
 - `-cfg/c` - set CFG scale
 - `-sampler/r` - set sampler, get valid values with `/sdsamplers`
 - `-model/m` - set model, get valid values with `/sdmodels`
+- `-upscale/u` - upscale output image with ratio
+- `-upscaler` - set upscaler method, get valid values with `/sdupscalers`
 - `-hr` - enable highres mode and set upscale ratio
 - `-hr-denoisestrength/hrd` - set highres mode denoise strength
 - `-hr-upscaler/hru` - set highres mode upscaler, get valid values with `/sdupscalers`

@@ -12,8 +12,8 @@ import (
 type cmdHandlerType struct{}
 
 func (c *cmdHandlerType) SD(ctx context.Context, msg *models.Message) {
-	renderParams := RenderParams{
-		OrigPrompt:  msg.Text,
+	reqParams := ReqParamsRender{
+		origPrompt:  msg.Text,
 		Seed:        rand.Uint32(),
 		Width:       params.DefaultWidth,
 		Height:      params.DefaultHeight,
@@ -22,7 +22,7 @@ func (c *cmdHandlerType) SD(ctx context.Context, msg *models.Message) {
 		CFGScale:    7,
 		SamplerName: params.DefaultSampler,
 		ModelName:   params.DefaultModel,
-		HR: RenderParamsHR{
+		HR: ReqParamsRenderHR{
 			DenoisingStrength: 0.4,
 			Upscaler:          "R-ESRGAN 4x+",
 			SecondPassSteps:   15,
@@ -32,14 +32,14 @@ func (c *cmdHandlerType) SD(ctx context.Context, msg *models.Message) {
 	var paramsLine *string
 	lines := strings.Split(msg.Text, "\n")
 	if len(lines) >= 2 {
-		renderParams.Prompt = lines[0]
-		renderParams.NegativePrompt = strings.Join(lines[1:], " ")
-		paramsLine = &renderParams.NegativePrompt
+		reqParams.Prompt = lines[0]
+		reqParams.NegativePrompt = strings.Join(lines[1:], " ")
+		paramsLine = &reqParams.NegativePrompt
 	} else {
-		renderParams.Prompt = msg.Text
-		paramsLine = &renderParams.Prompt
+		reqParams.Prompt = msg.Text
+		paramsLine = &reqParams.Prompt
 	}
-	firstCmdCharAt, err := renderParams.Parse(ctx, *paramsLine)
+	firstCmdCharAt, err := ReqParamsParse(ctx, *paramsLine, &reqParams)
 	if err != nil {
 		sendReplyToMessage(ctx, msg, errorStr+": can't parse render params: "+err.Error())
 		return
@@ -48,20 +48,46 @@ func (c *cmdHandlerType) SD(ctx context.Context, msg *models.Message) {
 		*paramsLine = (*paramsLine)[:firstCmdCharAt]
 	}
 
-	renderParams.Prompt = strings.Trim(renderParams.Prompt, " ")
-	renderParams.NegativePrompt = strings.Trim(renderParams.NegativePrompt, " ")
+	reqParams.Prompt = strings.Trim(reqParams.Prompt, " ")
+	reqParams.NegativePrompt = strings.Trim(reqParams.NegativePrompt, " ")
 
-	if renderParams.Prompt == "" {
+	if reqParams.Prompt == "" {
 		fmt.Println("  missing prompt")
 		sendReplyToMessage(ctx, msg, errorStr+": missing prompt")
 		return
 	}
 
-	if renderParams.HR.Scale > 0 {
-		renderParams.NumOutputs = 1
+	if reqParams.HR.Scale > 0 || reqParams.Upscale.Scale > 0 {
+		reqParams.NumOutputs = 1
 	}
 
-	reqQueue.Add(renderParams, msg)
+	req := ReqQueueReq{
+		Type:    ReqTypeRender,
+		Message: msg,
+		Params:  reqParams,
+	}
+	reqQueue.Add(req)
+}
+
+func (c *cmdHandlerType) SDUpscale(ctx context.Context, msg *models.Message) {
+	reqParams := ReqParamsUpscale{
+		origPrompt: msg.Text,
+		Scale:      4,
+		Upscaler:   "LDSR",
+	}
+
+	_, err := ReqParamsParse(ctx, msg.Text, &reqParams)
+	if err != nil {
+		sendReplyToMessage(ctx, msg, errorStr+": can't parse render params: "+err.Error())
+		return
+	}
+
+	req := ReqQueueReq{
+		Type:    ReqTypeUpscale,
+		Message: msg,
+		Params:  reqParams,
+	}
+	reqQueue.Add(req)
 }
 
 func (c *cmdHandlerType) SDCancel(ctx context.Context, msg *models.Message) {
@@ -176,6 +202,7 @@ func (c *cmdHandlerType) Help(ctx context.Context, msg *models.Message, cmdChar 
 	sendReplyToMessage(ctx, msg, "🤖 Stable Diffusion Telegram Bot\n\n"+
 		"Available commands:\n\n"+
 		cmdChar+"sd [prompt] - render prompt\n"+
+		cmdChar+"sdupscale - upscale image\n"+
 		cmdChar+"sdcancel - cancel ongoing request\n"+
 		cmdChar+"sdmodels - list available models\n"+
 		cmdChar+"sdsamplers - list available samplers\n"+
@@ -194,9 +221,15 @@ func (c *cmdHandlerType) Help(ctx context.Context, msg *models.Message, cmdChar 
 		"-cfg/c - set CFG scale\n"+
 		"-sampler/r - set sampler, get valid values with /sdsamplers\n"+
 		"-model/m - set model, get valid values with /sdmodels\n"+
+		"-upscale/u - upscale output image with ratio\n"+
+		"-upscaler - set upscaler method, get valid values with /sdupscalers\n"+
 		"-hr - enable highres mode and set upscale ratio\n"+
 		"-hr-denoisestrength/hrd - set highres mode denoise strength\n"+
 		"-hr-upscaler/hru - set highres mode upscaler, get valid values with /sdupscalers\n"+
 		"-hr-steps/hrt - set the number of highres mode second pass steps\n\n"+
+		"Available upscale parameters:\n\n"+
+		"-upscale/u - upscale output image with ratio\n"+
+		"-upscaler - set upscaler method, get valid values with /sdupscalers\n"+
+		"-png - upload PNGs instead of JPEGs\n\n"+
 		"For more information see https://github.com/nonoo/stable-diffusion-telegram-bot")
 }

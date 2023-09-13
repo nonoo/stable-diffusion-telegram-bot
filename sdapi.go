@@ -77,7 +77,9 @@ type RenderReq struct {
 	SendImages        bool                   `json:"send_images"`
 }
 
-func (a *sdAPIType) Render(ctx context.Context, params RenderParams) (imgs [][]byte, err error) {
+func (a *sdAPIType) Render(ctx context.Context, p ReqParams, imageData ImageFileData) (imgs [][]byte, err error) {
+	params := p.(ReqParamsRender)
+
 	postData, err := json.Marshal(RenderReq{
 		EnableHR:          params.HR.Scale > 0,
 		DenoisingStrength: params.HR.DenoisingStrength,
@@ -131,6 +133,59 @@ func (a *sdAPIType) Render(ctx context.Context, params RenderParams) (imgs [][]b
 	}
 
 	return imgs, nil
+}
+
+type UpscaleReq struct {
+	ResizeMode                     int     `json:"resize_mode,omitempty"`
+	ShowExtrasResults              bool    `json:"show_extras_results,omitempty"`
+	GFPGANVisibility               float32 `json:"gfpgan_visibility,omitempty"`
+	CodeFormerVisibility           float32 `json:"codeformer_visibility,omitempty"`
+	CodeFormerWeight               float32 `json:"codeformer_weight,omitempty"`
+	UpscalingResize                float32 `json:"upscaling_resize,omitempty"`
+	UpscalingResizeWidth           int     `json:"upscaling_resize_w,omitempty"`
+	UpscalingResizeHeight          int     `json:"upscaling_resize_h,omitempty"`
+	UpscalingResizeWidthHeightCrop bool    `json:"upscaling_crop,omitempty"`
+	Upscaler1                      string  `json:"upscaler_1,omitempty"`
+	Upscaler2                      string  `json:"upscaler_2,omitempty"`
+	Upscaler2Visibility            float32 `json:"extras_upscaler_2_visibility,omitempty"`
+	UpscaleFirst                   bool    `json:"upscale_first,omitempty"`
+	Image                          string  `json:"image"`
+}
+
+func (a *sdAPIType) Upscale(ctx context.Context, p ReqParams, imageData ImageFileData) (imgs [][]byte, err error) {
+	params := p.(ReqParamsUpscale)
+
+	postData, err := json.Marshal(UpscaleReq{
+		UpscalingResize: params.Scale,
+		Upscaler1:       params.Upscaler,
+		Image:           base64.StdEncoding.EncodeToString(imageData.data),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := a.req(ctx, "/extra-single-image", "", postData)
+	if err != nil {
+		return nil, err
+	}
+
+	var renderResp struct {
+		Image string `json:"image"`
+	}
+	err = json.Unmarshal([]byte(res), &renderResp)
+	if err != nil {
+		return nil, err
+	}
+	if len(renderResp.Image) == 0 {
+		return nil, fmt.Errorf("unknown error")
+	}
+
+	var unbased []byte
+	if unbased, err = base64.StdEncoding.DecodeString(renderResp.Image); err != nil {
+		return nil, fmt.Errorf("image base64 decode error")
+	}
+
+	return [][]byte{unbased}, nil
 }
 
 func (a *sdAPIType) Interrupt(ctx context.Context) error {

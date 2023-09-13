@@ -40,8 +40,36 @@ func sendTextToAdmins(ctx context.Context, s string) {
 	}
 }
 
-func telegramBotUpdateHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
-	if update.Message == nil || update.Message.Text == "" { // Only handling message updates.
+type ImageFileData struct {
+	data     []byte
+	filename string
+}
+
+func handleImage(ctx context.Context, update *models.Update, fileID, filename string) {
+	// Are we expecting image data from this user?
+	if reqQueue.currentEntry.gotImageChan == nil || update.Message.From.ID != reqQueue.currentEntry.entry.Message.From.ID {
+		return
+	}
+
+	var g GetFile
+	d, err := g.GetFile(ctx, fileID)
+	if err != nil {
+		reqQueue.currentEntry.entry.sendReply(ctx, errorStr+": can't get file: "+err.Error())
+		return
+	}
+	reqQueue.currentEntry.entry.sendReply(ctx, doneStr+" downloading\n"+reqQueue.currentEntry.entry.Params.String())
+	// Updating the message to reply to this document.
+	reqQueue.currentEntry.entry.Message = update.Message
+	reqQueue.currentEntry.entry.ReplyMessage = nil
+	// Notifying the request queue that we now got the image data.
+	reqQueue.currentEntry.gotImageChan <- ImageFileData{
+		data:     d,
+		filename: filename,
+	}
+}
+
+func handleMessage(ctx context.Context, update *models.Update) {
+	if update.Message.Text == "" {
 		return
 	}
 
@@ -74,6 +102,10 @@ func telegramBotUpdateHandler(ctx context.Context, b *bot.Bot, update *models.Up
 		case "sd":
 			fmt.Println("  interpreting as cmd sd")
 			cmdHandler.SD(ctx, update.Message)
+			return
+		case "sdupscale":
+			fmt.Println("  interpreting as cmd sdupscale")
+			cmdHandler.SDUpscale(ctx, update.Message)
 			return
 		case "sdcancel":
 			fmt.Println("  interpreting as cmd sdcancel")
@@ -125,6 +157,20 @@ func telegramBotUpdateHandler(ctx context.Context, b *bot.Bot, update *models.Up
 
 	if update.Message.Chat.ID >= 0 { // From user?
 		cmdHandler.SD(ctx, update.Message)
+	}
+}
+
+func telegramBotUpdateHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.Message == nil {
+		return
+	}
+
+	if update.Message.Document != nil {
+		handleImage(ctx, update, update.Message.Document.FileID, update.Message.Document.FileName)
+	} else if update.Message.Photo != nil && len(update.Message.Photo) > 0 {
+		handleImage(ctx, update, update.Message.Photo[len(update.Message.Photo)-1].FileID, "image.jpg")
+	} else if update.Message.Text != "" {
+		handleMessage(ctx, update)
 	}
 }
 

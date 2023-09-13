@@ -18,10 +18,13 @@ import (
 	"github.com/go-telegram/bot/models"
 )
 
+const imageReqStr = "🩻 Please post the image file to process."
 const processStartStr = "🛎 Starting render..."
 const processStr = "🔨 Processing"
 const progressBarLength = 20
+const downloadingStr = "⬇ Downloading..."
 const uploadingStr = "☁ ️ Uploading..."
+const doneStr = "✅ Done"
 const errorStr = "❌ Error"
 const canceledStr = "❌ Canceled"
 const restartStr = "⚠️ Stable Diffusion is not running, starting, please wait..."
@@ -31,11 +34,19 @@ const processTimeout = 3 * time.Minute
 const groupChatProgressUpdateInterval = 3 * time.Second
 const privateChatProgressUpdateInterval = 500 * time.Millisecond
 
-type ReqQueueEntry struct {
-	Params RenderParams
+type ReqType int
 
-	TaskID           uint64
-	RenderParamsText string
+const (
+	ReqTypeRender ReqType = iota
+	ReqTypeUpscale
+)
+
+type ReqQueueEntry struct {
+	Type ReqType
+
+	Params ReqParams
+
+	TaskID uint64
 
 	ReplyMessage *models.Message
 	Message      *models.Message
@@ -93,7 +104,8 @@ func (e *ReqQueueEntry) convertImagesFromPNGToJPG(ctx context.Context, imgs [][]
 	return nil
 }
 
-func (e *ReqQueueEntry) sendImages(ctx context.Context, imgs [][]byte, retryAllowed bool) error {
+// If filename is empty then a filename will be automatically generated.
+func (e *ReqQueueEntry) uploadImages(ctx context.Context, firstImageID uint32, description string, imgs [][]byte, filename string, retryAllowed bool) error {
 	if len(imgs) == 0 {
 		fmt.Println("  error: nothing to upload")
 		return fmt.Errorf("nothing to upload")
@@ -103,13 +115,16 @@ func (e *ReqQueueEntry) sendImages(ctx context.Context, imgs [][]byte, retryAllo
 	for i := range imgs {
 		var c string
 		if i == 0 {
-			c = e.Params.OrigPrompt + "\n" + e.RenderParamsText
+			c = description
 			if len(c) > 1024 {
 				c = c[:1021] + "..."
 			}
 		}
+		if filename == "" {
+			filename = fmt.Sprintf("sd-image-%x-%d-%d.jpg", firstImageID, e.TaskID, i)
+		}
 		media = append(media, &models.InputMediaPhoto{
-			Media:           fmt.Sprintf("attach://sd-image-%x-%d-%d.jpg", e.Params.Seed, e.TaskID, i),
+			Media:           "attach://" + filename,
 			MediaAttachment: bytes.NewReader(imgs[i]),
 			Caption:         c,
 		})
@@ -131,7 +146,7 @@ func (e *ReqQueueEntry) sendImages(ctx context.Context, imgs [][]byte, retryAllo
 		if retryAfter > 0 {
 			fmt.Println("  retrying after", retryAfter, "...")
 			time.Sleep(retryAfter)
-			return e.sendImages(ctx, imgs, false)
+			return e.uploadImages(ctx, firstImageID, description, imgs, filename, false)
 		}
 	}
 	return nil
@@ -149,12 +164,15 @@ func (e *ReqQueueEntry) deleteReply(ctx context.Context) {
 }
 
 type ReqQueueCurrentEntry struct {
+	entry     *ReqQueueEntry
 	canceled  bool
 	ctxCancel context.CancelFunc
 
 	imgsChan    chan [][]byte
 	errChan     chan error
 	stoppedChan chan bool
+
+	gotImageChan chan ImageFileData
 }
 
 type ReqQueue struct {
@@ -166,13 +184,20 @@ type ReqQueue struct {
 	currentEntry ReqQueueCurrentEntry
 }
 
-func (q *ReqQueue) Add(params RenderParams, message *models.Message) {
+type ReqQueueReq struct {
+	Type    ReqType
+	Message *models.Message
+	Params  ReqParams
+}
+
+func (q *ReqQueue) Add(req ReqQueueReq) {
 	q.mutex.Lock()
 
 	newEntry := ReqQueueEntry{
-		Params:  params,
+		Type:    req.Type,
+		Message: req.Message,
+		Params:  req.Params,
 		TaskID:  rand.Uint64(),
-		Message: message,
 	}
 
 	if len(q.entries) > 0 {
@@ -223,8 +248,12 @@ func (q *ReqQueue) queryProgress(ctx context.Context, prevProgressPercent int) (
 	return
 }
 
-func (q *ReqQueue) render(renderCtx context.Context, qEntry *ReqQueueEntry, retryAllowed bool, imgsChan chan [][]byte, errChan chan error, stoppedChan chan bool) {
-	imgs, err := sdAPI.Render(renderCtx, qEntry.Params)
+type ReqQueueEntryProcessFn func(context.Context, ReqParams, ImageFileData) (imgs [][]byte, err error)
+
+func (q *ReqQueue) runProcessThread(processCtx context.Context, processFn ReqQueueEntryProcessFn, imageData ImageFileData, retryAllowed bool,
+	imgsChan chan [][]byte, errChan chan error, stoppedChan chan bool) {
+
+	imgs, err := processFn(processCtx, q.currentEntry.entry.Params, imageData)
 	if err == nil {
 		imgsChan <- imgs
 		stoppedChan <- true
@@ -233,15 +262,15 @@ func (q *ReqQueue) render(renderCtx context.Context, qEntry *ReqQueueEntry, retr
 
 	if errors.Is(err, syscall.ECONNREFUSED) { // Can't connect to Stable Diffusion?
 		if params.SDStart {
-			qEntry.sendReply(renderCtx, restartStr)
-			err = startStableDiffusionIfNeeded(renderCtx)
+			q.currentEntry.entry.sendReply(processCtx, restartStr)
+			err = startStableDiffusionIfNeeded(processCtx)
 			if err != nil {
 				fmt.Println("  error:", err)
-				qEntry.sendReply(renderCtx, restartFailedStr+": "+err.Error())
+				q.currentEntry.entry.sendReply(processCtx, restartFailedStr+": "+err.Error())
 				panic(err.Error())
 			}
 			if retryAllowed {
-				q.render(renderCtx, qEntry, false, imgsChan, errChan, stoppedChan)
+				q.runProcessThread(processCtx, processFn, imageData, false, imgsChan, errChan, stoppedChan)
 				return
 			}
 		} else {
@@ -254,42 +283,18 @@ func (q *ReqQueue) render(renderCtx context.Context, qEntry *ReqQueueEntry, retr
 	stoppedChan <- true
 }
 
-func (q *ReqQueue) processQueueEntry(renderCtx context.Context, qEntry *ReqQueueEntry) error {
-	fmt.Print("processing request from ", qEntry.Message.From.Username, "#", qEntry.Message.From.ID, ": ", qEntry.Params.Prompt, "\n")
+func (q *ReqQueue) runProcess(processCtx context.Context, processFn ReqQueueEntryProcessFn, imageData ImageFileData, reqParamsText string) (imgs [][]byte, err error) {
+	q.currentEntry.entry.sendReply(q.ctx, processStartStr+"\n"+reqParamsText)
 
-	var numOutputs string
-	if qEntry.Params.NumOutputs > 1 {
-		numOutputs = fmt.Sprintf("x%d", qEntry.Params.NumOutputs)
-	}
+	q.currentEntry.imgsChan = make(chan [][]byte)
+	q.currentEntry.errChan = make(chan error, 1)
+	q.currentEntry.stoppedChan = make(chan bool, 1)
 
-	var outFormatText string
-	if qEntry.Params.OutputPNG {
-		outFormatText = "/PNG"
-	}
-
-	qEntry.RenderParamsText = fmt.Sprintf("🌱%d 👟%d 🕹%.1f 🖼%dx%d%s%s 🔭%s 🧩%s", qEntry.Params.Seed, qEntry.Params.Steps,
-		qEntry.Params.CFGScale, qEntry.Params.Width, qEntry.Params.Height, numOutputs, outFormatText, qEntry.Params.SamplerName,
-		qEntry.Params.ModelName)
-
-	if qEntry.Params.HR.Scale > 0 {
-		qEntry.RenderParamsText += " 🔎" + qEntry.Params.HR.Upscaler + "x" + fmt.Sprint(qEntry.Params.HR.Scale, "/", qEntry.Params.HR.DenoisingStrength)
-	}
-
-	if qEntry.Params.NegativePrompt != "" {
-		negText := qEntry.Params.NegativePrompt
-		if len(negText) > 10 {
-			negText = negText[:10] + "..."
-		}
-		qEntry.RenderParamsText = "📍" + negText + " " + qEntry.RenderParamsText
-	}
-
-	qEntry.sendReply(q.ctx, processStartStr+"\n"+qEntry.RenderParamsText)
-
-	go q.render(renderCtx, qEntry, true, q.currentEntry.imgsChan, q.currentEntry.errChan, q.currentEntry.stoppedChan)
+	go q.runProcessThread(processCtx, processFn, imageData, true, q.currentEntry.imgsChan, q.currentEntry.errChan, q.currentEntry.stoppedChan)
 	fmt.Println("  render started")
 
 	progressUpdateInterval := groupChatProgressUpdateInterval
-	if qEntry.Message.Chat.ID >= 0 {
+	if q.currentEntry.entry.Message.Chat.ID >= 0 {
 		progressUpdateInterval = privateChatProgressUpdateInterval
 	}
 	progressPercentUpdateTicker := time.NewTicker(progressUpdateInterval)
@@ -311,39 +316,98 @@ func (q *ReqQueue) processQueueEntry(renderCtx context.Context, qEntry *ReqQueue
 
 	var progressPercent int
 	var eta time.Duration
-	var imgs [][]byte
-	var err error
-checkLoop:
 	for {
 		select {
-		case <-renderCtx.Done():
-			return fmt.Errorf("timeout")
+		case <-processCtx.Done():
+			return nil, fmt.Errorf("timeout")
 		case <-progressPercentUpdateTicker.C:
-			qEntry.sendReply(q.ctx, processStr+" "+getProgressbar(progressPercent, progressBarLength)+" ETA: "+fmt.Sprint(eta.Round(time.Second))+"\n"+qEntry.RenderParamsText)
+			q.currentEntry.entry.sendReply(q.ctx, processStr+" "+getProgressbar(progressPercent, progressBarLength)+" ETA: "+fmt.Sprint(eta.Round(time.Second))+"\n"+reqParamsText)
 		case <-progressCheckTicker.C:
-			progressPercent, eta, _ = q.queryProgress(renderCtx, progressPercent)
+			progressPercent, eta, _ = q.queryProgress(processCtx, progressPercent)
 		case err = <-q.currentEntry.errChan:
-			return err
+			return nil, err
 		case imgs = <-q.currentEntry.imgsChan:
-			break checkLoop
+			return imgs, nil
+		}
+	}
+}
+
+func (q *ReqQueue) upscale(processCtx context.Context, imageData ImageFileData) error {
+	reqParams := q.currentEntry.entry.Params.(ReqParamsUpscale)
+	reqParamsText := reqParams.String()
+
+	imgs, err := q.runProcess(processCtx, sdAPI.Upscale, imageData, reqParamsText)
+	if err != nil {
+		return err
+	}
+
+	fn := fileNameWithoutExt(imageData.filename) + "-upscaled"
+	if !reqParams.OutputPNG {
+		err = q.currentEntry.entry.convertImagesFromPNGToJPG(q.ctx, imgs)
+		if err != nil {
+			return err
+		}
+		fn += ".jpg"
+	} else {
+		fn += ".png"
+	}
+
+	fmt.Println("  uploading...")
+	q.currentEntry.entry.sendReply(q.ctx, uploadingStr+"\n"+reqParamsText)
+
+	err = q.currentEntry.entry.uploadImages(q.ctx, 0, "", imgs, fn, true)
+	if err == nil {
+		q.currentEntry.entry.deleteReply(q.ctx)
+	}
+	return err
+}
+
+func (q *ReqQueue) render(processCtx context.Context) error {
+	reqParams := q.currentEntry.entry.Params.(ReqParamsRender)
+	reqParamsText := reqParams.String()
+
+	imgs, err := q.runProcess(processCtx, sdAPI.Render, ImageFileData{}, reqParamsText)
+	if err != nil {
+		return err
+	}
+
+	// Now we have the output images.
+	if reqParams.Upscale.Scale > 0 {
+		err = q.upscale(processCtx, ImageFileData{data: imgs[0], filename: ""})
+		if err != nil {
+			return err
 		}
 	}
 
-	if !qEntry.Params.OutputPNG {
-		err = qEntry.convertImagesFromPNGToJPG(q.ctx, imgs)
+	if !reqParams.OutputPNG {
+		err = q.currentEntry.entry.convertImagesFromPNGToJPG(q.ctx, imgs)
 		if err != nil {
 			return err
 		}
 	}
 
 	fmt.Println("  uploading...")
-	qEntry.sendReply(q.ctx, uploadingStr+"\n"+qEntry.RenderParamsText)
+	q.currentEntry.entry.sendReply(q.ctx, uploadingStr+"\n"+reqParamsText)
 
-	err = qEntry.sendImages(q.ctx, imgs, true)
+	err = q.currentEntry.entry.uploadImages(q.ctx, reqParams.Seed, reqParams.OrigPrompt()+"\n"+reqParamsText, imgs, "", true)
 	if err == nil {
-		qEntry.deleteReply(q.ctx)
+		q.currentEntry.entry.deleteReply(q.ctx)
 	}
 	return err
+}
+
+func (q *ReqQueue) processQueueEntry(processCtx context.Context, imageData ImageFileData) error {
+	fmt.Print("processing request from ", q.currentEntry.entry.Message.From.Username, "#",
+		q.currentEntry.entry.Message.From.ID, ": ", q.currentEntry.entry.Params.OrigPrompt(), "\n")
+
+	switch q.currentEntry.entry.Type {
+	case ReqTypeRender:
+		return q.render(processCtx)
+	case ReqTypeUpscale:
+		return q.upscale(processCtx, imageData)
+	default:
+		return fmt.Errorf("unknown request")
+	}
 }
 
 func (q *ReqQueue) processor() {
@@ -360,37 +424,66 @@ func (q *ReqQueue) processor() {
 			sendReplyToMessage(q.ctx, q.entries[i].Message, q.getQueuePositionString(i))
 		}
 
-		qEntry := &q.entries[0]
-
-		q.currentEntry = ReqQueueCurrentEntry{}
-		var renderCtx context.Context
-		renderCtx, q.currentEntry.ctxCancel = context.WithTimeout(q.ctx, processTimeout)
-		q.currentEntry.imgsChan = make(chan [][]byte)
-		q.currentEntry.errChan = make(chan error, 1)
-		q.currentEntry.stoppedChan = make(chan bool, 1)
+		q.currentEntry = ReqQueueCurrentEntry{
+			entry: &q.entries[0],
+		}
+		var processCtx context.Context
+		processCtx, q.currentEntry.ctxCancel = context.WithTimeout(q.ctx, processTimeout)
 		q.mutex.Unlock()
 
-		err := q.processQueueEntry(renderCtx, qEntry)
+		var err error
+		var imageData ImageFileData
+		imageNeededFirst := false
+		switch q.currentEntry.entry.Type {
+		case ReqTypeUpscale:
+			imageNeededFirst = true
+		}
+		if imageNeededFirst {
+			fmt.Println("  waiting for image file...")
+			q.currentEntry.entry.sendReply(q.ctx, imageReqStr)
+			q.currentEntry.gotImageChan = make(chan ImageFileData)
+			select {
+			case imageData = <-q.currentEntry.gotImageChan:
+			case <-processCtx.Done():
+				q.currentEntry.canceled = true
+			case <-time.NewTimer(3 * time.Minute).C:
+				fmt.Println("  waiting for image file timeout")
+				err = fmt.Errorf("waiting for image data timeout")
+			}
+			close(q.currentEntry.gotImageChan)
+			q.currentEntry.gotImageChan = nil
+
+			if err == nil && len(imageData.data) == 0 {
+				err = fmt.Errorf("got no image data")
+			}
+		}
+
+		if err == nil {
+			err = q.processQueueEntry(processCtx, imageData)
+		}
 
 		q.mutex.Lock()
 		if q.currentEntry.canceled {
 			fmt.Print("  canceled\n")
-			err := sdAPI.Interrupt(q.ctx)
+			err = sdAPI.Interrupt(q.ctx)
 			if err != nil {
 				fmt.Println("  can't interrupt:", err)
 			}
-			qEntry.sendReply(q.ctx, canceledStr)
+			q.currentEntry.entry.sendReply(q.ctx, canceledStr)
 		} else if err != nil {
 			fmt.Println("  error:", err)
-			qEntry.sendReply(q.ctx, errorStr+": "+err.Error())
+			q.currentEntry.entry.sendReply(q.ctx, errorStr+": "+err.Error())
 		}
 
 		q.currentEntry.ctxCancel()
 
-		<-q.currentEntry.stoppedChan
-		close(q.currentEntry.imgsChan)
-		close(q.currentEntry.errChan)
-		close(q.currentEntry.stoppedChan)
+		if q.currentEntry.stoppedChan != nil {
+			<-q.currentEntry.stoppedChan
+			close(q.currentEntry.imgsChan)
+			close(q.currentEntry.errChan)
+			close(q.currentEntry.stoppedChan)
+			q.currentEntry.stoppedChan = nil
+		}
 
 		q.entries = q.entries[1:]
 		if len(q.entries) == 0 {
