@@ -176,7 +176,7 @@ func (c *cmdHandlerType) Help(ctx context.Context, msg *models.Message, cmdChar 
 	sendReplyToMessage(ctx, msg, "🤖 Stable Diffusion Telegram Bot\n\n"+
 		"Available commands:\n\n"+
 		cmdChar+"sd [prompt] - render prompt\n"+
-		cmdChar+"sdcancel - cancel current render\n"+
+		cmdChar+"sdcancel - cancel ongoing request\n"+
 		cmdChar+"sdmodels - list available models\n"+
 		cmdChar+"sdsamplers - list available samplers\n"+
 		cmdChar+"sdembeddings - list available embeddings\n"+

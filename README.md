@@ -71,7 +71,7 @@ variable. Available OS environment variables are:
 ## Supported commands
 
 - `/sd` - render images using supplied prompt
-- `/sdcancel` - cancel ongoing download
+- `/sdcancel` - cancel ongoing request
 - `/sdmodels` - list available models
 - `/sdsamplers` - list available samplers
 - `/sdembeddings` - list available embeddings
