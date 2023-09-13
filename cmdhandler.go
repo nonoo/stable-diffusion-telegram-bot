@@ -11,7 +11,7 @@ import (
 
 type cmdHandlerType struct{}
 
-func (c *cmdHandlerType) ED(ctx context.Context, msg *models.Message) {
+func (c *cmdHandlerType) SD(ctx context.Context, msg *models.Message) {
 	renderParams := RenderParams{
 		OrigPrompt:  msg.Text,
 		Seed:        rand.Uint32(),
@@ -64,7 +64,7 @@ func (c *cmdHandlerType) ED(ctx context.Context, msg *models.Message) {
 	dlQueue.Add(renderParams, msg)
 }
 
-func (c *cmdHandlerType) EDCancel(ctx context.Context, msg *models.Message) {
+func (c *cmdHandlerType) SDCancel(ctx context.Context, msg *models.Message) {
 	if err := dlQueue.CancelCurrentEntry(ctx); err != nil {
 		sendReplyToMessage(ctx, msg, errorStr+": "+err.Error())
 	}

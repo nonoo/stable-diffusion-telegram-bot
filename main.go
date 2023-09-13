@@ -73,11 +73,11 @@ func telegramBotUpdateHandler(ctx context.Context, b *bot.Bot, update *models.Up
 		switch cmd {
 		case "sd":
 			fmt.Println("  interpreting as cmd sd")
-			cmdHandler.ED(ctx, update.Message)
+			cmdHandler.SD(ctx, update.Message)
 			return
 		case "sdcancel":
 			fmt.Println("  interpreting as cmd sdcancel")
-			cmdHandler.EDCancel(ctx, update.Message)
+			cmdHandler.SDCancel(ctx, update.Message)
 			return
 		case "sdmodels":
 			fmt.Println("  interpreting as cmd sdmodels")
@@ -124,7 +124,7 @@ func telegramBotUpdateHandler(ctx context.Context, b *bot.Bot, update *models.Up
 	}
 
 	if update.Message.Chat.ID >= 0 { // From user?
-		cmdHandler.ED(ctx, update.Message)
+		cmdHandler.SD(ctx, update.Message)
 	}
 }
 
