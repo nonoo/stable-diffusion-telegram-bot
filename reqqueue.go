@@ -123,7 +123,7 @@ func (e *ReqQueueEntry) uploadImages(ctx context.Context, firstImageID uint32, d
 			}
 		}
 		if generateFilename {
-			filename = fmt.Sprintf("sd-image-%x-%d-%d.jpg", firstImageID, e.TaskID, i)
+			filename = fmt.Sprintf("sd-image-%d-%d-%d.jpg", firstImageID, e.TaskID, i)
 		}
 		media = append(media, &models.InputMediaPhoto{
 			Media:           "attach://" + filename,
