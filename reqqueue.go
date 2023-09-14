@@ -30,7 +30,7 @@ const canceledStr = "❌ Canceled"
 const restartStr = "⚠️ Stable Diffusion is not running, starting, please wait..."
 const restartFailedStr = "☠️ Stable Diffusion start failed, please restart the bot"
 
-const processTimeout = 3 * time.Minute
+const processTimeout = 10 * time.Minute
 const groupChatProgressUpdateInterval = 3 * time.Second
 const privateChatProgressUpdateInterval = 500 * time.Millisecond
 
