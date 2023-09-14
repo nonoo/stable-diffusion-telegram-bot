@@ -111,6 +111,8 @@ func (e *ReqQueueEntry) uploadImages(ctx context.Context, firstImageID uint32, d
 		return fmt.Errorf("nothing to upload")
 	}
 
+	generateFilename := (filename == "")
+
 	var media []models.InputMedia
 	for i := range imgs {
 		var c string
@@ -120,7 +122,7 @@ func (e *ReqQueueEntry) uploadImages(ctx context.Context, firstImageID uint32, d
 				c = c[:1021] + "..."
 			}
 		}
-		if filename == "" {
+		if generateFilename {
 			filename = fmt.Sprintf("sd-image-%x-%d-%d.jpg", firstImageID, e.TaskID, i)
 		}
 		media = append(media, &models.InputMediaPhoto{
@@ -250,10 +252,10 @@ func (q *ReqQueue) queryProgress(ctx context.Context, prevProgressPercent int) (
 
 type ReqQueueEntryProcessFn func(context.Context, ReqParams, ImageFileData) (imgs [][]byte, err error)
 
-func (q *ReqQueue) runProcessThread(processCtx context.Context, processFn ReqQueueEntryProcessFn, imageData ImageFileData, retryAllowed bool,
+func (q *ReqQueue) runProcessThread(processCtx context.Context, processFn ReqQueueEntryProcessFn, reqParams ReqParams, imageData ImageFileData, retryAllowed bool,
 	imgsChan chan [][]byte, errChan chan error, stoppedChan chan bool) {
 
-	imgs, err := processFn(processCtx, q.currentEntry.entry.Params, imageData)
+	imgs, err := processFn(processCtx, reqParams, imageData)
 	if err == nil {
 		imgsChan <- imgs
 		stoppedChan <- true
@@ -270,7 +272,7 @@ func (q *ReqQueue) runProcessThread(processCtx context.Context, processFn ReqQue
 				panic(err.Error())
 			}
 			if retryAllowed {
-				q.runProcessThread(processCtx, processFn, imageData, false, imgsChan, errChan, stoppedChan)
+				q.runProcessThread(processCtx, processFn, reqParams, imageData, false, imgsChan, errChan, stoppedChan)
 				return
 			}
 		} else {
@@ -283,14 +285,14 @@ func (q *ReqQueue) runProcessThread(processCtx context.Context, processFn ReqQue
 	stoppedChan <- true
 }
 
-func (q *ReqQueue) runProcess(processCtx context.Context, processFn ReqQueueEntryProcessFn, imageData ImageFileData, reqParamsText string) (imgs [][]byte, err error) {
+func (q *ReqQueue) runProcess(processCtx context.Context, processFn ReqQueueEntryProcessFn, reqParams ReqParams, imageData ImageFileData, reqParamsText string) (imgs [][]byte, err error) {
 	q.currentEntry.entry.sendReply(q.ctx, processStartStr+"\n"+reqParamsText)
 
 	q.currentEntry.imgsChan = make(chan [][]byte)
 	q.currentEntry.errChan = make(chan error, 1)
 	q.currentEntry.stoppedChan = make(chan bool, 1)
 
-	go q.runProcessThread(processCtx, processFn, imageData, true, q.currentEntry.imgsChan, q.currentEntry.errChan, q.currentEntry.stoppedChan)
+	go q.runProcessThread(processCtx, processFn, reqParams, imageData, true, q.currentEntry.imgsChan, q.currentEntry.errChan, q.currentEntry.stoppedChan)
 	fmt.Println("  render started")
 
 	progressUpdateInterval := groupChatProgressUpdateInterval
@@ -332,11 +334,10 @@ func (q *ReqQueue) runProcess(processCtx context.Context, processFn ReqQueueEntr
 	}
 }
 
-func (q *ReqQueue) upscale(processCtx context.Context, imageData ImageFileData) error {
-	reqParams := q.currentEntry.entry.Params.(ReqParamsUpscale)
+func (q *ReqQueue) upscale(processCtx context.Context, reqParams ReqParamsUpscale, imageData ImageFileData) error {
 	reqParamsText := reqParams.String()
 
-	imgs, err := q.runProcess(processCtx, sdAPI.Upscale, imageData, reqParamsText)
+	imgs, err := q.runProcess(processCtx, sdAPI.Upscale, reqParams, imageData, reqParamsText)
 	if err != nil {
 		return err
 	}
@@ -362,18 +363,23 @@ func (q *ReqQueue) upscale(processCtx context.Context, imageData ImageFileData) 
 	return err
 }
 
-func (q *ReqQueue) render(processCtx context.Context) error {
-	reqParams := q.currentEntry.entry.Params.(ReqParamsRender)
+func (q *ReqQueue) render(processCtx context.Context, reqParams ReqParamsRender) error {
 	reqParamsText := reqParams.String()
 
-	imgs, err := q.runProcess(processCtx, sdAPI.Render, ImageFileData{}, reqParamsText)
+	imgs, err := q.runProcess(processCtx, sdAPI.Render, reqParams, ImageFileData{}, reqParamsText)
 	if err != nil {
 		return err
 	}
 
 	// Now we have the output images.
 	if reqParams.Upscale.Scale > 0 {
-		err = q.upscale(processCtx, ImageFileData{data: imgs[0], filename: ""})
+		reqParamsUpscale := ReqParamsUpscale{
+			origPrompt: reqParams.OrigPrompt(),
+			Scale:      reqParams.Upscale.Scale,
+			Upscaler:   reqParams.Upscale.Upscaler,
+			OutputPNG:  reqParams.OutputPNG,
+		}
+		imgs, err = q.runProcess(processCtx, sdAPI.Upscale, reqParamsUpscale, ImageFileData{data: imgs[0], filename: ""}, reqParamsUpscale.String())
 		if err != nil {
 			return err
 		}
@@ -402,9 +408,9 @@ func (q *ReqQueue) processQueueEntry(processCtx context.Context, imageData Image
 
 	switch q.currentEntry.entry.Type {
 	case ReqTypeRender:
-		return q.render(processCtx)
+		return q.render(processCtx, q.currentEntry.entry.Params.(ReqParamsRender))
 	case ReqTypeUpscale:
-		return q.upscale(processCtx, imageData)
+		return q.upscale(processCtx, q.currentEntry.entry.Params.(ReqParamsUpscale), imageData)
 	default:
 		return fmt.Errorf("unknown request")
 	}

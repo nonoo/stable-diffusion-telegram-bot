@@ -22,6 +22,9 @@ func (c *cmdHandlerType) SD(ctx context.Context, msg *models.Message) {
 		CFGScale:    7,
 		SamplerName: params.DefaultSampler,
 		ModelName:   params.DefaultModel,
+		Upscale: ReqParamsUpscale{
+			Upscaler: "LDSR",
+		},
 		HR: ReqParamsRenderHR{
 			DenoisingStrength: 0.4,
 			Upscaler:          "R-ESRGAN 4x+",
