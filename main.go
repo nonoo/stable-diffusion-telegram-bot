@@ -135,6 +135,10 @@ func handleMessage(ctx context.Context, update *models.Update) {
 			fmt.Println("  interpreting as cmd sdvaes")
 			cmdHandler.VAEs(ctx, update.Message)
 			return
+		case "sdsmi":
+			fmt.Println("  interpreting as cmd sdsmi")
+			cmdHandler.SMI(ctx, update.Message)
+			return
 		case "sdhelp":
 			fmt.Println("  interpreting as cmd sdhelp")
 			cmdHandler.Help(ctx, update.Message, cmdChar)

@@ -78,6 +78,7 @@ variable. Available OS environment variables are:
 - `/sdloras` - list available LoRAs
 - `/sdupscalers` - list available upscalers
 - `/sdvaes` - list available VAEs
+- `/sdsmi` - get the output of nvidia-smi
 - `/sdhelp` - print help
 
 You can also use the `!` command character instead of `/`.

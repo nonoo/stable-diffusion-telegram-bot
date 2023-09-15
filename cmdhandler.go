@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os/exec"
 	"strings"
 
 	"github.com/go-telegram/bot/models"
@@ -201,6 +202,17 @@ func (c *cmdHandlerType) VAEs(ctx context.Context, msg *models.Message) {
 	sendReplyToMessage(ctx, msg, text)
 }
 
+func (c *cmdHandlerType) SMI(ctx context.Context, msg *models.Message) {
+	cmd := exec.Command("nvidia-smi")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("  error running nvidia-smi:", err)
+		sendReplyToMessage(ctx, msg, errorStr+": error running nvidia-smi: "+err.Error())
+		return
+	}
+	sendReplyToMessage(ctx, msg, string(out))
+}
+
 func (c *cmdHandlerType) Help(ctx context.Context, msg *models.Message, cmdChar string) {
 	sendReplyToMessage(ctx, msg, "🤖 Stable Diffusion Telegram Bot\n\n"+
 		"Available commands:\n\n"+
@@ -213,6 +225,7 @@ func (c *cmdHandlerType) Help(ctx context.Context, msg *models.Message, cmdChar 
 		cmdChar+"sdloras - list available LoRAs\n"+
 		cmdChar+"sdupscalers - list available upscalers\n"+
 		cmdChar+"sdvaes - list available VAEs\n"+
+		cmdChar+"sdsmi - get the output of nvidia-smi\n"+
 		cmdChar+"sdhelp - show this help\n\n"+
 		"Available render parameters at the end of the prompt:\n\n"+
 		"-seed/s - set seed\n"+
