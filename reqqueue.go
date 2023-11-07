@@ -276,6 +276,13 @@ func (q *ReqQueue) runProcessThread(processCtx context.Context, processFn ReqQue
 				return
 			}
 		} else {
+			fmt.Println("  error: Stable Diffusion is not running and start is disabled, waiting...")
+			time.Sleep(30 * time.Second)
+			if retryAllowed {
+				q.runProcessThread(processCtx, processFn, reqParams, imageData, false, imgsChan, errChan, stoppedChan)
+				return
+			}
+
 			err = fmt.Errorf("Stable Diffusion is not running and start is disabled.")
 			fmt.Println("  error:", err)
 		}
